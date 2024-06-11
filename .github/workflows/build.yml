@@ -88,6 +88,11 @@ jobs:
             --tag="$IMAGE_NAME_2222:latest" \
             --tag="$IMAGE_NAME_2222:$DATE_TAG"
 
+      - name: Test image
+        env:
+          SFTP_PORT: 2222
+        run: tests/run $IMAGE_NAME_2222:latest
+
       - name: Push images to Docker Hub registry
         if: github.ref == 'refs/heads/master'
         env:
