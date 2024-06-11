@@ -12,6 +12,7 @@ on:
 
 env:
   IMAGE_NAME: ghcr.io/techonomydev/atmoz-sftp
+  IMAGE_NAME_2222: ghcr.io/techonomydev/atmoz-sftp-2222
 
 jobs:
   build:
@@ -56,4 +57,48 @@ jobs:
             -u "$GITHUB_ACTOR" --password-stdin
 
           docker push --all-tags $IMAGE_NAME
+          docker logout
+
+  build_2222:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true # for shunit2
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          ignore_paths: tests/shunit2
+
+      - name: Generate date tag
+        id: generate_date
+        shell: bash
+        run: echo "date-tag=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Build debian image
+        shell: bash
+        env:
+          DATE_TAG: ${{ steps.generate_date.outputs.date-tag }}
+        run: |
+          docker build . \
+            --pull=true \
+            --file=Dockerfile-port-2222 \
+            --tag="$IMAGE_NAME_2222:latest" \
+            --tag="$IMAGE_NAME_2222:$DATE_TAG"
+
+      - name: Test image
+        run: tests/run $IMAGE_NAME_2222:latest
+
+      - name: Push images to Docker Hub registry
+        if: github.ref == 'refs/heads/master'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          echo "$GITHUB_TOKEN" | docker login ghcr.io \
+            -u "$GITHUB_ACTOR" --password-stdin
+
+          docker push --all-tags $IMAGE_NAME_2222
           docker logout
