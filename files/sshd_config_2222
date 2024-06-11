@@ -18,8 +18,7 @@ Subsystem sftp internal-sftp
 ForceCommand internal-sftp
 ChrootDirectory %h
 
-# Port 2222
-
+Port 2222
 
 # Enable this for more logs
 #LogLevel VERBOSE
