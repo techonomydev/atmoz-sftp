@@ -13,6 +13,8 @@ sshHostEd25519Key="$tmpDir/ssh_host_ed25519_key"
 sshHostKeyMountArg="--volume=$sshHostEd25519Key:/etc/ssh/ssh_host_ed25519_key"
 sshKnownHosts="$tmpDir/known_hosts"
 
+SFTP_PORT=${SFTP_PORT:-"22"}
+
 if [ $UID != 0 ] && ! groups | grep -qw docker; then
     echo "Run with sudo/root or add user $USER to group 'docker'"
     exit 1
@@ -103,24 +105,26 @@ function runSftpCommands() {
 
     echo "$commands" | sftp \
         -i "$sshKeyPri" \
+        -P "$SFTP_PORT" \
         -oUserKnownHostsFile="$sshKnownHosts" \
         -b - "$user@$ip" \
         > "$redirect" 2>&1
 
     status=$?
+
     sleep 1 # wait for commands to finish
     return $status
 }
 
 function waitForServer() {
     containerName="$1"
-    echo -n "Waiting for $containerName to open port 22 ..."
+    echo -n "Waiting for $containerName to open port $SFTP_PORT ..."
 
     for _ in {1..30}; do
         sleep 1
         ip="$(getSftpIp "$containerName")"
         echo -n "."
-        if [ -n "$ip" ] && nc -z "$ip" 22; then
+        if [ -n "$ip" ] && nc -z "$ip" "$SFTP_PORT"; then
             echo " OPEN"
             return 0;
         fi
@@ -274,8 +278,16 @@ function testWriteAccessToAutocreatedDirs() {
 function testWriteAccessToLimitedChroot() {
     # Modified sshd_config with chrooted home subdir
     tmpConfig="$(mktemp)"
-    sed 's/^ChrootDirectory.*/ChrootDirectory %h\/sftp/' \
-        < "$testDir/../files/sshd_config" > "$tmpConfig"
+
+    
+
+    if [ "$SFTP_PORT" == "2222" ]; then
+        sed 's/^ChrootDirectory.*/ChrootDirectory %h\/sftp/' \
+            < "$testDir/../files/sshd_config_2222" > "$tmpConfig"
+    else
+        sed 's/^ChrootDirectory.*/ChrootDirectory %h\/sftp/' \
+            < "$testDir/../files/sshd_config" > "$tmpConfig"
+    fi
 
     # Set correct permissions on chroot
     tmpScript="$(mktemp)"
