@@ -22,3 +22,6 @@ Port 2222
 
 # Enable this for more logs
 #LogLevel VERBOSE
+
+# Allow more authentication attempts per connection
+MaxAuthTries 12
