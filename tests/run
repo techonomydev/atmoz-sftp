@@ -54,7 +54,7 @@ function oneTimeSetUp() {
     chmod go-rw "$sshKeyPri"
 
     # Generate host key
-    ssh-keygen -t ed25519 -f "$sshHostEd25519Key" < /dev/null
+    ssh-keygen -t ed25519 -f "$sshHostEd25519Key" -N '' < /dev/null
 }
 
 function setUp() {
@@ -88,7 +88,8 @@ function retireContainer() {
 }
 
 function getSftpIp() {
-    docker inspect -f "{{.NetworkSettings.IPAddress}}" "$1"
+    # Top-level .NetworkSettings.IPAddress was removed in Docker 29
+    docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" "$1"
 }
 
 function runSftpCommands() {
